@@ -2,9 +2,14 @@ import { type SQLiteDatabase } from "expo-sqlite";
 
 export default async function initializeDatabase(database: SQLiteDatabase) {
   try {
+    await database.execAsync(`DROP TABLE IF EXISTS savedChapters;`);
+    await database.execAsync(`DROP TABLE IF EXISTS savedMangas;`);
+    await database.execAsync(`DROP TABLE IF EXISTS categories;`);
+    await database.execAsync(`DROP TABLE IF EXISTS mangaCodeUpdates;`);
+
     await database.execAsync(
       `CREATE TABLE IF NOT EXISTS categories (
-        id TEXT PRIMARY KEY NOT NULL,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         orderKanban INTEGER UNIQUE NOT NULL
       );`
@@ -15,9 +20,10 @@ export default async function initializeDatabase(database: SQLiteDatabase) {
     );
 
     if (result?.count === 0) {
+      // Inserindo uma categoria com ID autoincrementado (não é necessário fornecer o ID, o SQLite gera automaticamente)
       await database.runAsync(
-        "INSERT INTO categories (id, name, orderKanban) VALUES (?, ?, ?);",
-        [crypto.randomUUID(), "Default", 1]
+        "INSERT INTO categories (id, name, orderKanban) VALUES (?,?, ?);",
+        [1, "Default", 1]
       );
     }
   } catch (error) {
@@ -26,7 +32,7 @@ export default async function initializeDatabase(database: SQLiteDatabase) {
 
   await database.execAsync(
     `CREATE TABLE IF NOT EXISTS savedMangas (
-        id TEXT PRIMARY KEY, 
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL, 
         lastChapterReaded INTEGER NOT NULL, 
         origin TEXT NOT NULL, 
@@ -38,7 +44,7 @@ export default async function initializeDatabase(database: SQLiteDatabase) {
 
   await database.execAsync(
     `CREATE TABLE IF NOT EXISTS savedChapters (
-        id TEXT PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         chapNumber INTEGER NOT NULL,
         read BOOLEAN NOT NULL DEFAULT 0,
         savedMangaId TEXT NOT NULL,
@@ -48,11 +54,11 @@ export default async function initializeDatabase(database: SQLiteDatabase) {
 
   await database.execAsync(
     `CREATE TABLE IF NOT EXISTS mangaCodeUpdates (
-        id TEXT PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         githubLink TEXT NOT NULL,
-        savedHash TEXT, 
-        savedCode TEXT
+        version TEXT, 
+        fetchMangas TEXT
     );`
   );
 }

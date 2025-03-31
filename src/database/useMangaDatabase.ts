@@ -15,8 +15,84 @@ export type SavedManga = {
   categoryId: string;
 };
 
+export type SavedChapter = {
+  id: string;
+  chapNumber: number;
+  read: boolean;
+  savedMangaId: string;
+};
+
+export type MangaCodeUpdate = {
+  id: string;
+  name: string;
+  githubLink: string;
+  version: string;
+  fetchMangas: string;
+};
+
 export function useMangaDatabase() {
   const database = useSQLiteContext();
+
+  async function getAllCategories() {
+    try {
+      const query = `SELECT * FROM categories;`;
+
+      const result = await database.getAllAsync<Category>(query);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async function getAllCodes() {
+    try {
+      const query = `SELECT * FROM mangaCodeUpdates;`;
+
+      const result = await database.getAllAsync<MangaCodeUpdate>(query);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async function saveCode(data: Omit<MangaCodeUpdate, "id">) {
+    try {
+      const existing = await database.getFirstAsync<{ count: number }>(
+        "SELECT COUNT(*) as count FROM mangaCodeUpdates WHERE name = ?;",
+        [data.name]
+      );
+
+      if (existing && existing?.count > 0) {
+        throw new Error(`Já existe um código salvo com o nome "${data.name}".`);
+      }
+
+      const statement = await database.prepareAsync(
+        "INSERT INTO mangaCodeUpdates (name, githubLink, version, fetchMangas) VALUES ($name, $githubLink, $version, $fetchMangas);"
+      );
+
+      const result = await statement.executeAsync({
+        $name: data.name,
+        $githubLink: data.githubLink,
+        $version: data.version,
+        $fetchMangas: data.fetchMangas,
+      });
+
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async function getCodeById(id: string) {
+    try {
+      const query = `SELECT * FROM mangaCodeUpdates WHERE id = ?;`;
+
+      const result = await database.getFirstAsync<MangaCodeUpdate>(query, id);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
 
   async function saveManga(data: Omit<SavedManga, "id">) {
     const statement = await database.prepareAsync(
@@ -31,6 +107,8 @@ export function useMangaDatabase() {
         $img: data.img,
         $categoryId: data.categoryId,
       });
+
+      return result;
     } catch (error) {
       throw error;
     } finally {
@@ -47,7 +125,7 @@ export function useMangaDatabase() {
         `%${name}%`
       );
 
-      return Response;
+      return result;
     } catch (error) {
       throw error;
     }
@@ -56,5 +134,9 @@ export function useMangaDatabase() {
   return {
     saveManga,
     searchMangaByName,
+    getAllCategories,
+    getAllCodes,
+    saveCode,
+    getCodeById,
   };
 }
